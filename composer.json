@@ -1,7 +1,7 @@
 {
     "name": "zkriahac/laravel-paynkolay",
     "description": "Paynkolay payment gateway integration for Laravel",
-    "type": "library",
+    "type": "laravel-module",
     "license": "MIT",
     "autoload": {
         "psr-4": {
