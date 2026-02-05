@@ -1,0 +1,41 @@
+{
+    "name": "zkriahac/laravel-paynkolay",
+    "description": "Paynkolay payment gateway integration for Laravel",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Zkriahac\\Paynkolay\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^8.0",
+        "laravel/framework": "^9.0|^10.0|^11.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "ext-json": "*",
+        "ext-openssl": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "orchestra/testbench": "^7.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Zkriahac\\Paynkolay\\PaynkolayServiceProvider"
+            ],
+            "aliases": {
+                "Paynkolay": "Zkriahac\\Paynkolay\\Facades\\Paynkolay"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "config": {
+        "sort-packages": true,
+        "preferred-install": "dist"
+    }
+}
