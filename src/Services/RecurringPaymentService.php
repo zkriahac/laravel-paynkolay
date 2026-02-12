@@ -55,8 +55,8 @@ class RecurringPaymentService
 
             $result = json_decode($response->getBody()->getContents(), true);
 
-            if (isset($result['Status']) && $result['Status'] !== 'SUCCESS') {
-                throw new PaynkolayException($result['Message'] ?? 'Recurring payment creation failed');
+            if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+                throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Recurring payment creation failed');
             }
 
             return $result;
@@ -82,7 +82,13 @@ class RecurringPaymentService
             ]
         ]);
 
-        return json_decode($response->getBody()->getContents(), true);
+        $result = json_decode($response->getBody()->getContents(), true);
+
+        if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+            throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Recurring payment cancellation failed');
+        }
+
+        return $result;
     }
 
     public function listRecurringPayments(array $filters = []): array

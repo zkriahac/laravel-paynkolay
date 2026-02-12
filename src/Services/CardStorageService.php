@@ -48,8 +48,8 @@ class CardStorageService
 
             $result = json_decode($response->getBody()->getContents(), true);
 
-            if (isset($result['status']) && $result['status'] !== 'success') {
-                throw new PaynkolayException($result['message'] ?? 'Card registration failed');
+            if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+                throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Card registration failed');
             }
 
             return $result;
@@ -75,7 +75,13 @@ class CardStorageService
             ]
         ]);
 
-        return json_decode($response->getBody()->getContents(), true);
+        $result = json_decode($response->getBody()->getContents(), true);
+        
+        if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+            throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Failed to list cards');
+        }
+
+        return $result;
     }
 
     public function deleteCard(string $customerKey, string $tranId, string $token = ''): array
@@ -96,6 +102,13 @@ class CardStorageService
             ]
         ]);
 
-        return json_decode($response->getBody()->getContents(), true);
+        $result = json_decode($response->getBody()->getContents(), true);
+        
+        // Handle Paynkolay response format
+        if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+            throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Failed to delete card');
+        }
+
+        return $result;
     }
 }

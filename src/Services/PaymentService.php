@@ -41,18 +41,20 @@ class PaymentService
             'use3D' => $this->config['use_3d'] ? 'true' : 'false',
             'transactionType' => 'SALES',
             'rnd' => now()->format('d-m-Y H:i:s'),
+            'sx' => $this->config['sx'],
+            'merchantSecret' => $this->config['merchant_secret'],
         ], $paymentData);
 
         // Generate hash
         $paymentData['hashDatav2'] = $this->hashService->generatePaymentHash([
-            'sx' => $this->config['sx'],
+            'sx' => $paymentData['sx'],
             'clientRefCode' => $paymentData['clientRefCode'],
             'amount' => $paymentData['amount'],
             'successUrl' => $paymentData['successUrl'],
             'failUrl' => $paymentData['failUrl'],
             'rnd' => $paymentData['rnd'],
             'customerKey' => $paymentData['csCustomerKey'] ?? '',
-        ], $this->config['merchant_secret']);
+        ], $paymentData['merchantSecret']);
 
         try {
             $env = $this->config['environment'] === 'production' ? 'production' : 'sandbox';
@@ -64,11 +66,14 @@ class PaymentService
 
             $responseData = json_decode($response->getBody()->getContents(), true);
             
-            if (isset($responseData['status']) && $responseData['status'] !== 'success') {
-                throw new PaynkolayException($responseData['message'] ?? 'Payment failed');
+            $apiResponse = $responseData['response'] ?? $responseData;
+            
+            if (!isset($apiResponse['RESPONSE_CODE']) || $apiResponse['RESPONSE_CODE'] == 0) {
+                $errorMsg = $apiResponse['RESPONSE_MESSAGE'] ?? $apiResponse['RESPONSE_DATA'] ?? $apiResponse['message'] ?? 'Payment failed';
+                throw new PaynkolayException($errorMsg);
             }
 
-            return $responseData;
+            return $apiResponse;
 
         } catch (RequestException $e) {
             throw new PaynkolayException('Payment request failed: ' . $e->getMessage());

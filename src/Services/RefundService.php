@@ -50,8 +50,8 @@ class RefundService
 
             $result = json_decode($response->getBody()->getContents(), true);
 
-            if (isset($result['status']) && $result['status'] !== 'success') {
-                throw new PaynkolayException($result['message'] ?? 'Cancel/Refund failed');
+            if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+                throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Cancel/Refund failed');
             }
 
             return $result;
