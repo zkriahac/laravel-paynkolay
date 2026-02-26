@@ -21,10 +21,12 @@ class PaynkolayServiceProvider extends ServiceProvider
                 config('paynkolay.sx'),
                 config('paynkolay.sx_cancel'),
                 config('paynkolay.sx_list'),
-                config('paynkolay.environment', 'sandbox')
+                config('paynkolay.environment', 'sandbox'),
+                config('paynkolay.urls', []),
+                config('paynkolay.callback_urls', [])
+                
             );
         });
-
         // Register aliases
         $this->app->alias('paynkolay', PaynkolayService::class);
     }

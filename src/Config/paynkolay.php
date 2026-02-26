@@ -29,6 +29,7 @@ return [
         'sandbox' => [
             'base' => 'https://paynkolaytest.nkolayislem.com.tr',
             'payment' => '/Vpos/v1/Payment',
+            'complete_payment' => '/Vpos/v1/CompletePayment',
             'payment_installments' => '/Vpos/Payment/PaymentInstallments',
             'cancel_refund' => '/Vpos/v1/CancelRefundPayment',
             'payment_list' => '/Vpos/Payment/PaymentList',
@@ -49,6 +50,7 @@ return [
         'production' => [
             'base' => 'https://secure.nkolayislem.com.tr',
             'payment' => '/Vpos/v1/Payment',
+            'complete_payment' => '/Vpos/v1/CompletePayment',
             'payment_installments' => '/Vpos/Payment/PaymentInstallments',
             'cancel_refund' => '/Vpos/v1/CancelRefundPayment',
             'payment_list' => '/Vpos/Payment/PaymentList',
@@ -112,7 +114,6 @@ return [
     */
     'models' => [
         'transaction' => \Zkriahac\Paynkolay\Models\Transaction::class,
-        'saved_card' => \Zkriahac\Paynkolay\Models\SavedCard::class,
-        'subscription' => \Zkriahac\Paynkolay\Models\Subscription::class,
+        'saved_card' => \Zkriahac\Paynkolay\Models\SavedCard::class
     ],
 ];

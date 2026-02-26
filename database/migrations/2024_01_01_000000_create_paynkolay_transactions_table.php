@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('paynkolay_transactions', function (Blueprint $table) {
             $table->id();
-            $table->string('reference_code')->unique();
+            $table->string('reference_code')->nullable()->unique();
             $table->string('client_ref_code')->index();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->decimal('amount', 10, 2);

@@ -61,6 +61,8 @@ class CardStorageService
 
     public function listCards(string $customerKey): array
     {
+        // Generate hash directly for card listing
+        // Format: sx|customerKey|merchantSecret (no extra fields needed)
         $hashString = $this->config['sx'] . '|' . $customerKey . '|' . $this->config['merchant_secret'];
         $hashData = base64_encode(hash('sha512', $hashString, true));
 
@@ -86,8 +88,13 @@ class CardStorageService
 
     public function deleteCard(string $customerKey, string $tranId, string $token = ''): array
     {
-        $hashString = $this->config['sx'] . '|' . $customerKey . '|' . $tranId . '|' . $token . '|' . $this->config['merchant_secret'];
-        $hashData = base64_encode(hash('sha512', $hashString, true));
+        // Generate hash using HashService for consistency
+        $hashData = $this->hashService->generateCardStorageHash([
+            'sx' => $this->config['sx'],
+            'customerKey' => $customerKey,
+            'tranId' => $tranId,
+            'token' => $token,
+        ], $this->config['merchant_secret']);
 
         $env = $this->config['environment'] === 'production' ? 'production' : 'sandbox';
         $endpoint = $this->config['urls'][$env]['card_storage_delete'];

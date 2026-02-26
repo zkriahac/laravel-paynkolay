@@ -5,6 +5,7 @@ namespace Zkriahac\Paynkolay\Services;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Zkriahac\Paynkolay\Exceptions\PaynkolayException;
+use Zkriahac\Paynkolay\Models\Transaction;
 
 class RecurringPaymentService
 {
@@ -45,9 +46,22 @@ class RecurringPaymentService
             'hashDatav2' => $hashData,
         ]);
 
+        // Create transaction record
+        $transaction = Transaction::create([
+            'client_ref_code' => $data['ClientRefCode'],
+            'amount' => $data['Amount'],
+            'currency' => $this->config['currency'] ?? '949',
+            'status' => 'pending',
+            'transaction_type' => 'RECURRING',
+            'use_3d' => false,
+            'user_id' => auth()->id(),
+            'ip_address' => request()->ip(),
+            'request_data' => $payload,
+        ]);
+
         $env = $this->config['environment'] === 'production' ? 'production' : 'sandbox';
         $endpoint = $this->config['urls'][$env]['recurring_create'];
-
+        \Log::debug('[createRecurringPayment] post payload', $payload);
         try {
             $response = $this->client->post($endpoint, [
                 'json' => $payload
@@ -56,12 +70,29 @@ class RecurringPaymentService
             $result = json_decode($response->getBody()->getContents(), true);
 
             if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+                // Update transaction with error
+                $transaction->update([
+                    'status' => 'failed',
+                    'response_data' => $result,
+                ]);
+                
                 throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Recurring payment creation failed');
             }
+
+            // Update transaction with success response
+            $transaction->update([
+                'response_data' => $result,
+            ]);
 
             return $result;
 
         } catch (RequestException $e) {
+            // Update transaction with error
+            $transaction->update([
+                'status' => 'failed',
+                'response_data' => ['error' => $e->getMessage()],
+            ]);
+            
             throw new PaynkolayException('Recurring payment creation failed: ' . $e->getMessage());
         }
     }
@@ -74,21 +105,57 @@ class RecurringPaymentService
         $env = $this->config['environment'] === 'production' ? 'production' : 'sandbox';
         $endpoint = $this->config['urls'][$env]['recurring_cancel'];
 
-        $response = $this->client->post($endpoint, [
-            'json' => [
-                'sx' => $this->config['sx'],
-                'InstructionNumber' => $instructionNumber,
-                'hashDatav2' => $hashData,
-            ]
-        ]);
+        $requestData = [
+            'sx' => $this->config['sx'],
+            'InstructionNumber' => $instructionNumber,
+            'hashDatav2' => $hashData,
+        ];
 
-        $result = json_decode($response->getBody()->getContents(), true);
+        try {
+            $response = $this->client->post($endpoint, [
+                'json' => $requestData
+            ]);
 
-        if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
-            throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Recurring payment cancellation failed');
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            if (isset($result['RESPONSE_CODE']) && $result['RESPONSE_CODE'] == 0) {
+                // Log cancellation failure
+                Transaction::create([
+                    'status' => 'failed',
+                    'transaction_type' => 'RECURRING_CANCEL',
+                    'user_id' => auth()->id(),
+                    'ip_address' => request()->ip(),
+                    'request_data' => $requestData,
+                    'response_data' => $result,
+                ]);
+                
+                throw new PaynkolayException($result['RESPONSE_DATA'] ?? 'Recurring payment cancellation failed');
+            }
+
+            // Log successful cancellation
+            Transaction::create([
+                'status' => 'success',
+                'transaction_type' => 'RECURRING_CANCEL',
+                'user_id' => auth()->id(),
+                'ip_address' => request()->ip(),
+                'request_data' => $requestData,
+                'response_data' => $result,
+            ]);
+
+            return $result;
+        } catch (RequestException $e) {
+            // Log request exception
+            Transaction::create([
+                'status' => 'failed',
+                'transaction_type' => 'RECURRING_CANCEL',
+                'user_id' => auth()->id(),
+                'ip_address' => request()->ip(),
+                'request_data' => $requestData,
+                'response_data' => ['error' => $e->getMessage()],
+            ]);
+            
+            throw new PaynkolayException('Recurring payment cancellation failed: ' . $e->getMessage());
         }
-
-        return $result;
     }
 
     public function listRecurringPayments(array $filters = []): array

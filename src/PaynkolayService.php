@@ -7,7 +7,6 @@ use Zkriahac\Paynkolay\Services\CardStorageService;
 use Zkriahac\Paynkolay\Services\RecurringPaymentService;
 use Zkriahac\Paynkolay\Services\RefundService;
 use Zkriahac\Paynkolay\Services\HashService;
-
 class PaynkolayService
 {
     private PaymentService $paymentService;
@@ -22,8 +21,11 @@ class PaynkolayService
         string $sx,
         string $sxCancel,
         string $sxList,
-        string $environment = 'sandbox'
-    ) {
+        string $environment = 'sandbox',
+        array $urls = [],
+        array $callbackUrls = []
+    ) { 
+
         $this->config = [
             'merchant_id' => $merchantId,
             'merchant_secret' => $merchantSecret,
@@ -33,6 +35,8 @@ class PaynkolayService
             'environment' => $environment,
             'currency' => '949',
             'use_3d' => true,
+            'urls' => $urls,
+            'callback_urls' => $callbackUrls
         ];
 
         $hashService = new HashService();
@@ -52,6 +56,16 @@ class PaynkolayService
     public function getInstallments(float $amount, string $cardNumber, bool $isCardValid = false): array
     {
         return $this->paymentService->getInstallments($amount, $cardNumber, $isCardValid);
+    }
+
+    public function completePayment(string $referenceCode): array
+    {
+        return $this->paymentService->completePayment($referenceCode);
+    }
+
+    public function listPayments(string $clientRefCode = '', string $startDate = '', string $endDate = '', int $pageCount = 0, int $pageSize = 25): array
+    {
+        return $this->paymentService->listPayments($clientRefCode, $startDate, $endDate, $pageCount, $pageSize);
     }
 
     // Card storage methods
@@ -79,6 +93,10 @@ class PaynkolayService
     public function cancelRecurringPayment(string $instructionNumber): array
     {
         return $this->recurringPaymentService->cancelRecurringPayment($instructionNumber);
+    }
+    public function listRecurringPayments(array $filters = []): array
+    {
+        return $this->recurringPaymentService->listRecurringPayments($filters);
     }
 
     // Refund methods
