@@ -24,7 +24,24 @@ class PaynkolayService
         string $environment = 'sandbox',
         array $urls = [],
         array $callbackUrls = []
-    ) { 
+    ) {
+
+        // Guarantee a usable URL map even when the caller omits one — e.g. the
+        // container singleton (app('paynkolay')) constructs without urls. Without
+        // this, the underlying services dereference $config['urls'][$env]['base']
+        // on an empty array and fatal with "Cannot assign null to $baseUrl".
+        // Caller-supplied values always win; the bundled config is only a fallback.
+        if (empty($urls) || empty($callbackUrls)) {
+            $bundled = require __DIR__ . '/Config/paynkolay.php';
+
+            if (empty($urls)) {
+                $urls = $bundled['urls'] ?? [];
+            }
+
+            if (empty($callbackUrls)) {
+                $callbackUrls = $bundled['callback_urls'] ?? [];
+            }
+        }
 
         $this->config = [
             'merchant_id' => $merchantId,
