@@ -69,14 +69,14 @@ class PaymentService
             'customer_key' => $paymentData['csCustomerKey'] ?? null,
             'user_id' => auth()->id(),
             'ip_address' => request()->ip(),
-            'request_data' => $paymentData,
+            'request_data' => $this->maskCardData($paymentData),
         ]);
 
         try {
             $env = $this->config['environment'] === 'production' ? 'production' : 'sandbox';
             $endpoint = $this->config['urls'][$env]['payment'];
             \Log::debug('[makePayment] paymentData', [
-                    'paymentData' => $paymentData,
+                    'paymentData' => $this->maskCardData($paymentData),
                     'endpoint' => $endpoint,
                 ]);
             $response = $this->client->post($endpoint, [
@@ -141,11 +141,6 @@ class PaymentService
 
     public function listPayments(string $clientRefCode = '', string $startDate = '', string $endDate = '', int $pageCount = 0, int $pageSize = 25): array
     {
-        \Log::debug('[listPayments] Config values', [
-            'sx_list' => $this->config['sx_list'],
-            'merchant_secret' => $this->config['merchant_secret'],
-        ]);
-
         // Hash format (matching Postman): sx | startDate | endDate | clientRefCode | merchant_secret
         $hashParams = [
             $this->config['sx_list'],
@@ -169,10 +164,16 @@ class PaymentService
             'pageSize' => $pageSize,
         ];
 
+        // Note: hashParams contains merchant_secret as its last segment and is
+        // intentionally NOT logged. formParams['sx'] is also sensitive (a
+        // signed credential) so we omit it from the log too.
         \Log::debug('[listPayments] Request', [
             'endpoint' => $endpoint,
-            'hashParams' => implode('|', $hashParams),
-            'formParams' => $formParams,
+            'clientRefCode' => $clientRefCode,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'pageCount' => $pageCount,
+            'pageSize' => $pageSize,
         ]);
 
         $response = $this->client->post($endpoint, [
@@ -294,5 +295,30 @@ class PaymentService
             
             throw new PaynkolayException('Pay by link creation failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Redact card data before logging or persisting to the transactions table.
+     *
+     * PCI-DSS: never store or log full PAN, CVV, or other card auth data.
+     * Last 4 of the PAN is allowed for reference, so we keep it. Expiry,
+     * CVV, and cardholder name are fully masked. Non-card fields pass
+     * through unchanged.
+     */
+    private function maskCardData(array $data): array
+    {
+        if (isset($data['cardNumber'])) {
+            $digits = preg_replace('/\D/', '', (string) $data['cardNumber']);
+            $last4 = substr($digits, -4);
+            $data['cardNumber'] = str_repeat('*', max(0, strlen($digits) - 4)) . $last4;
+        }
+
+        foreach (['cvv', 'month', 'year', 'cardHolderName'] as $field) {
+            if (isset($data[$field]) && $data[$field] !== '') {
+                $data[$field] = str_repeat('*', strlen((string) $data[$field]));
+            }
+        }
+
+        return $data;
     }
 }
